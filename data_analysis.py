@@ -87,3 +87,58 @@ alpha1,alpha2 = (min(yellow_revs[1:]),max(yellow_revs[1:]))
 beta1,beta2 = (min(green_revs),max(green_revs[0:-2]))
 
 #%%
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.arima.model import ARIMA
+import sklearn.linear_model as lm
+#%%
+"""
+Estimate AR(1),ARMA(1,1) and ARIMA(1,1,1) models on the first 400 data and then backtest on the 
+remaining 100 data points. 
+
+Use it on absolute values and then on changes in revenues. 
+"""
+merged_df['Revenue'].rolling(window = 5).mean().plot(grid = True)
+arma10_abs = ARIMA(merged_df['Revenue'].iloc[0:400],order = (1,0,0)).fit()
+arma10_chg = ARIMA(merged_df['Revenue'].diff().iloc[0:400],order = (1,0,0)).fit()
+arma11_chg = ARIMA(merged_df['Revenue'].diff().iloc[0:400],order = (1,0,1)).fit()
+arima111_chg = ARIMA(merged_df['Revenue'].diff().iloc[0:400],order = (1,1,1)).fit()
+#%%
+arma10abs_fitted = arma10_abs.predict()
+arma10chg_fitted = arma10_chg.predict()
+arma11chg_fitted = arma11_chg.predict()
+arima111_chg_fitted = arima111_chg.predict()
+#%%
+"""
+Root Mean Square Error for fitted values
+"""
+RMSEarma10_abs = np.std(abs(arma10abs_fitted-merged_df['Revenue'].iloc[0:400]))
+RMSEarma10_chg = np.std(abs(arma10chg_fitted-merged_df['Revenue'].diff().iloc[0:400]))
+RMSEarma11_chg = np.std(abs(arma11chg_fitted-merged_df['Revenue'].diff().iloc[0:400]))
+RMSEarima111_chg = np.std(abs(arima111_chg_fitted-merged_df['Revenue'].diff().iloc[0:400]))
+#%%
+arma10abs_predicted = arma10_abs.forecast(100)
+arma10_predicted = arma10_chg.forecast(100)
+arma11_predicted = arma11_chg.forecast(100)
+arima111_predicted = arima111_chg.forecast(100)
+#%%
+"""
+Root Mean Square Error for forecasted values
+"""
+RMSEarma10_abs_for = np.std(abs(arma10abs_predicted-merged_df['Revenue'].iloc[400:500]))
+RMSEarma10_chg_for = np.std(abs(arma10_predicted-merged_df['Revenue'].diff().iloc[400:500]))
+RMSEarma11_chg_for = np.std(abs(arma11_predicted-merged_df['Revenue'].diff().iloc[400:500]))
+RMSEarima111_chg_for = np.std(abs(arima111_predicted-merged_df['Revenue'].diff().iloc[400:500]))
+#%%
+"""
+ARMA10 absolute revenues parameters: const = 5.77, AR(1) param = -0.009
+ARMA10 changes in revenues parameters: const = 0.03, AR(1) param = -0.48
+ARMA11 changes in revenues parameters: if a Moving Average Parameter is added, then AR constant becomes non-significant
+
+ARIMA111 changes in revenues parameters. 
+"""
+print(arma10_abs.params)
+print(arma10_chg.params)
+print(arma11_chg.params)
+print(arima111_chg.params)
+
+
